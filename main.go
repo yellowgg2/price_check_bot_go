@@ -7,8 +7,8 @@ import (
 )
 
 func main() {
-	a := pricechecker.AppStore{}
-	ra, err := a.LookupApp(pricechecker.RequireInfo{ID: "782438457"})
+	r := pricechecker.AppQuery{ID: "782438457"}
+	ra, err := r.LookupApp()
 
 	if err != nil {
 		log.Fatal(err)

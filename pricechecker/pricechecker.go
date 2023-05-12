@@ -2,15 +2,12 @@ package pricechecker
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 )
 
-type AppStore struct{}
-
-type RequireInfo struct {
+type AppQuery struct {
 	ID      string
 	Country string
 }
@@ -18,6 +15,7 @@ type RequireInfo struct {
 type appStoreResponse struct {
 	Count   float64         `json:"resultCount"`
 	Results []RegisteredApp `json:"results"`
+	Err     string          `json:"errorMessage"`
 }
 
 type RegisteredApp struct {
@@ -29,15 +27,7 @@ type RegisteredApp struct {
 	ReleaseDate string  `json:"currentVersionReleaseDate"`
 }
 
-type AppStoreError struct {
-	ErrMsg string
-}
-
-func (ase AppStoreError) Error() string {
-	return fmt.Sprintf("Error Message : %v", ase.ErrMsg)
-}
-
-func (a AppStore) buildLookupURL(r RequireInfo) (string, error) {
+func (r AppQuery) buildLookupURL() (string, error) {
 	u, _ := url.Parse("https://itunes.apple.com/lookup")
 	q := u.Query()
 
@@ -58,8 +48,8 @@ func (a AppStore) buildLookupURL(r RequireInfo) (string, error) {
 	return u.String(), nil
 }
 
-func (a AppStore) LookupApp(r RequireInfo) (RegisteredApp, error) {
-	url, err := a.buildLookupURL(r)
+func (r AppQuery) LookupApp() (RegisteredApp, error) {
+	url, err := r.buildLookupURL()
 	if err != nil {
 		return RegisteredApp{}, err
 	}
@@ -72,7 +62,7 @@ func (a AppStore) LookupApp(r RequireInfo) (RegisteredApp, error) {
 
 	defer result.Body.Close()
 
-	response, err := ioutil.ReadAll(result.Body)
+	response, err := io.ReadAll(result.Body)
 
 	if err != nil {
 		return RegisteredApp{}, err
@@ -89,5 +79,11 @@ func (a AppStore) LookupApp(r RequireInfo) (RegisteredApp, error) {
 	if len(appResults.Results) > 0 {
 		return appResults.Results[0], nil
 	}
-	return RegisteredApp{}, AppStoreError{ErrMsg: "No results for the id"}
+
+	errMsg := "No results for the id"
+	if appResults.Err != "" {
+		errMsg = appResults.Err
+	}
+
+	return RegisteredApp{}, AppStoreError{ErrMsg: errMsg, ID: r.ID}
 }
