@@ -2,17 +2,34 @@ package main
 
 import (
 	"log"
+	"os"
 
-	pricechecker "github.com/yellowgg2/price_check_bot_go/pricechecker"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func main() {
-	r := pricechecker.AppQuery{ID: "782438457"}
-	ra, err := r.LookupApp()
-
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
-	log.Printf("Price: %v err: %v", ra.Price, err)
+	bot.Debug = true
+
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+
+	updates := bot.GetUpdatesChan(u)
+
+	for update := range updates {
+		if update.Message != nil { // If we got a message
+			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			msg.ReplyToMessageID = update.Message.MessageID
+
+			bot.Send(msg)
+		}
+	}
 }
