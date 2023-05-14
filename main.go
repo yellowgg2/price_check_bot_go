@@ -23,13 +23,31 @@ func main() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.Message != nil { // If we got a message
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
+
+		if update.Message != nil { // ignore any non-Message updates
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			msg.Text = "이건 리플라이 메세지"
 			msg.ReplyToMessageID = update.Message.MessageID
+			if _, err := bot.Send(msg); err != nil {
+				log.Printf("[Error] %s", err)
+			}
+		}
 
-			bot.Send(msg)
+		if update.Message.IsCommand() { // ignore any non-command Messages
+			switch update.Message.Command() {
+			case "help":
+				msg.Text = "I understand /sayhi and /status."
+			case "sayhi":
+				msg.Text = "Hi :)"
+			case "status":
+				msg.Text = "I'm ok."
+			default:
+				msg.Text = "I don't know that command"
+			}
+			if _, err := bot.Send(msg); err != nil {
+				log.Printf("[Error] %s", err)
+			}
 		}
 	}
 }
